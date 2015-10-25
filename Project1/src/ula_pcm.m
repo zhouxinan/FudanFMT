@@ -7,5 +7,8 @@ function [a_quan]=ula_pcm(a,n,u)
 %       U the parameter of the u-law
 
 % todo:
-
+temp = ulaw(a,u); % U-law encoding.
+temp = u_pcm(temp, n); % Uniform PCM encoding.
+temp = inv_ulaw(temp, u); % Inverse U-law encoding.
+a_quan = max(abs(a)) .* temp; % Get the final result.
 end

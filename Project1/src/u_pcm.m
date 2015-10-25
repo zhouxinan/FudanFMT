@@ -7,7 +7,7 @@ function [a_quan]=u_pcm(a,n)
 
 % todo:
 delta = (max(a) - min(a)) / n; % Calculate delta using n.
-m = delta .* (0:(n - 1)) + min(a); % m is the array of measurement values.
+m = min(a) + delta .* (0:(n - 1)); % m is the array of measurement values.
 q = m + delta / 2; % q is the array of quantized values.
 for i = 1 : length(a)
     for j = 1 : n
