@@ -3,10 +3,11 @@ function [a_quan]=ula_pcm(a,n,u)
 %       	[A_QUAN]=MULA_PCM(X,N,U).
 %       	X=input sequence.
 %       	n=number of quantization levels (even).     	
-%		a_quan=quantized output before encoding.
-%       U the parameter of the u-law
+%           a_quan=quantized output before encoding.
+%           U the parameter of the u-law
 
 % todo:
+
 temp = ulaw(a,u); % U-law encoding.
 temp = u_pcm(temp, n); % Uniform PCM encoding.
 temp = inv_ulaw(temp, u); % Inverse U-law encoding.
