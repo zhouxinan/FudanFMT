@@ -5,8 +5,8 @@ z2 = ula_pcm(y, 64, 255);
 % Draw the original signal.
 plot(t, y);
 hold on
-% Draw the uniform-PCM-encoded signal.
+% Draw the uniform-PCM-quantized signal.
 plot(t, z1, 'r');
 hold on
-% Draw the u-law-encoded signal.
+% Draw the u-law-quantized signal.
 plot(t, z2, 'g');
