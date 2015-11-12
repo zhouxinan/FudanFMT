@@ -3,12 +3,12 @@ filename = input('image:', 's');
 % Get pixel coordinate.
 x = input('x:');
 y = input('y:');
-% Read image file.
+% Read the image file.
 I = imread(filename);
 % Get image file size.
 [maxY, maxX, z] = size(I);
 
-% Check boundaries.
+% Check the limit.
 if x <= 1 || x >= maxX
     fprintf('x is off the limit.\n');
     return;
