@@ -4,13 +4,18 @@ image = imread('eight.tif');
 noiseImage = imnoise(image, 'salt & pepper', 0.04);
 % Show the noise image.
 figure, imshow(noiseImage);
-% 2-D median filtering
+% 2-D median filtering, window size 3 by 3.
 filteredImage1 = medfilt2(noiseImage, [3 3]);
 % Show filteredImage1.
 figure, imshow(filteredImage1);
-% Create averaging filter.
+% Create averaging filter, window size 3 by 3.
 h = fspecial('average', [3 3]);
 % Use averaging filter to filter the noise image.
 filteredImage2 = imfilter(noiseImage, h);
 % Show filteredImage2.
 figure, imshow(filteredImage2);
+% Write the new images to files
+imwrite(filteredImage1, 'eight_median_filter.jpg');
+imwrite(filteredImage2, 'eight_histogram_equalization.jpg');
+fprintf('The 2-D median filtered image has been saved to eight_median_filter.jpg.\n');
+fprintf('The histogram equalization image has been saved to eight_histogram_equalization.jpg.\n');

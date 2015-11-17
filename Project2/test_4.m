@@ -22,3 +22,5 @@ figure, imhist(K);
 % Write the new images to files
 imwrite(J, 'pout_imadjust.jpg');
 imwrite(K, 'pout_histeq.jpg');
+fprintf('The grey color expansion image has been saved to pout_imadjust.jpg.\n');
+fprintf('The histogram equalization image has been saved to pout_histeq.jpg.\n');

@@ -13,5 +13,6 @@ variance = var(newImage(:));
 imshow(newImage);
 % Write the new image to file.
 imwrite(newImage, 'sky_grey.jpg');
+fprintf('The grey image has been saved to sky_grey.jpg.\n');
 % Show the variance in the console.
 fprintf('The variance of the grey image is: %f\n', variance);

@@ -9,5 +9,6 @@ thresh = graythresh(image);
 newImage = im2bw(image, thresh);
 % Write the new image to file.
 imwrite(newImage, 'sky_binary.jpg');
+fprintf('The binary image has been saved to sky_binary.jpg.\n');
 % Show the new image in a window.
 figure, imshow(newImage);
