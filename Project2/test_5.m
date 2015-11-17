@@ -16,6 +16,6 @@ filteredImage2 = imfilter(noiseImage, h);
 figure, imshow(filteredImage2);
 % Write the new images to files
 imwrite(filteredImage1, 'eight_median_filter.jpg');
-imwrite(filteredImage2, 'eight_histogram_equalization.jpg');
+imwrite(filteredImage2, 'eight_averaging_filter.jpg');
 fprintf('The 2-D median filtered image has been saved to eight_median_filter.jpg.\n');
-fprintf('The histogram equalization image has been saved to eight_histogram_equalization.jpg.\n');
+fprintf('The averaging filtered image has been saved to eight_averaging_filter.jpg.\n');
