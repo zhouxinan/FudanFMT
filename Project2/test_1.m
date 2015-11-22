@@ -18,7 +18,7 @@ if y < 1 || y > maxY
     return;
 end
 
-% Print the result.
+% Check the limit and print the result.
 if y - 1 > 0
     if x - 1 > 0
         fprintf('(%d,%d):(%d,%d,%d)\n', x - 1, y - 1, I(x - 1, y - 1, 1), I(x - 1, y - 1, 2), I(x - 1, y - 1, 3));
