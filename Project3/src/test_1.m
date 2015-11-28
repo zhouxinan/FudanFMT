@@ -2,6 +2,7 @@
 outputFilename = 'out.gif';
 % Set the background color to white so as to avoid grey border.
 set(gcf, 'color', 'white');
+delayTime = 0.1;
 for n = 1:16
     % Read the images sequentially using n.
     I = imread(sprintf('Frame%d.bmp', n));
@@ -18,11 +19,11 @@ for n = 1:16
         % let the gif image loop infinitely. WriteMode should be 'overwrite' so
         % that a new gif file can be correctly created. DelayTime is set to
         % 0.1
-        imwrite(image, map, outputFilename, 'gif', 'DelayTime', 0.1, 'WriteMode', 'overwrite', 'LoopCount', Inf);
+        imwrite(image, map, outputFilename, 'gif', 'DelayTime', delayTime, 'WriteMode', 'overwrite', 'LoopCount', Inf);
     else
         % Write the other frames' images to the output file. WriteMode should be 'append' so
         % that the other frames' images can be correctly written. DelayTime
         % is set to 0.1
-        imwrite(image, map, outputFilename, 'gif', 'DelayTime', 0.1, 'WriteMode', 'append');
+        imwrite(image, map, outputFilename, 'gif', 'DelayTime', delayTime, 'WriteMode', 'append');
     end
 end
