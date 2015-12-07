@@ -5,19 +5,24 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LZWDecoder {
+	List<FrameImage> imageList;
 	FileInputStream fileInputStream;
 	DataInputStream dataInputStream;
 	DataOutputStream dataOutputStream;
+	int[][] globalColorTable = null;
 	public final int GIF_HEADER_LENGTH = 6;
+	int imageDataCount;
 
 	public LZWDecoder(FileInputStream fileInputStream) throws FileNotFoundException {
 		super();
 		this.fileInputStream = fileInputStream;
 		dataInputStream = new DataInputStream(fileInputStream);
 		dataOutputStream = new DataOutputStream(new FileOutputStream("a.gif"));
-
+		imageList = new ArrayList<FrameImage>();
 	}
 
 	public void decode() throws IOException {
@@ -52,8 +57,8 @@ public class LZWDecoder {
 		System.out.println("PixelAspectRatio: " + pixelAspectRatio);
 		if (globalColorTableFlag == 1) {
 			sizeOfGlobalColorTable = 1 << (sizeOfGlobalColorTable + 1);
-			dataInputStream.skipBytes(sizeOfGlobalColorTable * 3); // To be
-																	// developed
+			globalColorTable = new int[sizeOfGlobalColorTable][3];
+			loadColorTable(globalColorTable, sizeOfGlobalColorTable);
 		}
 		try {
 			while (true) {
@@ -101,9 +106,13 @@ public class LZWDecoder {
 					System.out.println("pixel:" + pixel);
 					if (m == 1) {
 						int sizeOflocalColorTable = 1 << (pixel + 1);
-						dataInputStream.skipBytes(sizeOflocalColorTable * 3); // To
-																				// be
-																				// developed
+						int[][] localColorTable = new int[sizeOflocalColorTable][3];
+						loadColorTable(localColorTable, sizeOflocalColorTable);
+						FrameImage image = new FrameImage(localColorTable, imageWidth, imageHeight);
+						imageList.add(image);
+					} else {
+						FrameImage image = new FrameImage(globalColorTable, imageWidth, imageHeight);
+						imageList.add(image);
 					}
 					int lzwMinimumCodeSize = dataInputStream.readUnsignedByte();
 				}
@@ -118,5 +127,13 @@ public class LZWDecoder {
 		int small = dataInputStream.read();
 		int big = dataInputStream.read();
 		return (small + big * 256);
+	}
+
+	public void loadColorTable(int[][] colorTable, int sizeOfColorTable) throws IOException {
+		for (int i = 0; i < sizeOfColorTable; i++) {
+			colorTable[i][0] = dataInputStream.readUnsignedByte();
+			colorTable[i][1] = dataInputStream.readUnsignedByte();
+			colorTable[i][2] = dataInputStream.readUnsignedByte();
+		}
 	}
 }
