@@ -1,139 +1,160 @@
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import javax.imageio.ImageIO;
 
 public class LZWDecoder {
-	List<FrameImage> imageList;
-	FileInputStream fileInputStream;
+	// Standard GIF max dictionary size in bits
+	final int MAX_DICTIONARY_BIT_SIZE = 12;
+	// Image of current frame.
+	FrameImage image;
 	DataInputStream dataInputStream;
-	DataOutputStream dataOutputStream;
-	int[][] globalColorTable = null;
-	public final int GIF_HEADER_LENGTH = 6;
-	int imageDataCount;
+	// Image size (width * height)
+	int imageSize;
+	// The original code size
+	int lzwMinimumCodeSize;
+	// Current code size
+	int codeSize;
+	// Color table of the image
+	int[] colorTable;
+	int dictionarySize;
+	int clearCode;
+	int stopCode;
+	int[][] dictionary;
+	// Size of the sub-block
+	int subblockSize;
+	// Position of current byte in the sub-block
+	int subblockByteCount;
+	// Current byte in the sub-block
+	int currentByte;
+	// Position of the bit to start to read from in currentByte.
+	int bitPointer;
+	// How many frame images have been processed.
+	static int frameImageCount;
+	// Pixel color buffer.
+	int[] pixelColor;
+	// The index of the pixel to write.
+	int pixelIndex;
 
-	public LZWDecoder(FileInputStream fileInputStream) throws FileNotFoundException {
+	public LZWDecoder(FrameImage image, DataInputStream dataInputStream) throws IOException {
 		super();
-		this.fileInputStream = fileInputStream;
-		dataInputStream = new DataInputStream(fileInputStream);
-		dataOutputStream = new DataOutputStream(new FileOutputStream("a.gif"));
-		imageList = new ArrayList<FrameImage>();
+		this.image = image;
+		this.dataInputStream = dataInputStream;
+		this.imageSize = image.getSize();
+		this.lzwMinimumCodeSize = dataInputStream.readUnsignedByte() + 1;
+		this.codeSize = lzwMinimumCodeSize;
+		this.colorTable = image.getColorTable();
+		this.dictionarySize = colorTable.length + 2;
+		this.clearCode = colorTable.length;
+		this.stopCode = colorTable.length + 1;
+		this.subblockSize = dataInputStream.readUnsignedByte();
+		this.currentByte = dataInputStream.readUnsignedByte();
+		this.dictionary = new int[1 << MAX_DICTIONARY_BIT_SIZE][];
+		this.subblockByteCount = 1;
+		this.bitPointer = 0;
+		this.pixelColor = new int[imageSize];
 	}
 
 	public void decode() throws IOException {
-		byte[] gifHeader = new byte[GIF_HEADER_LENGTH];
-		dataInputStream.read(gifHeader);
-		String gifHeaderString = new String(gifHeader);
-		if (!gifHeaderString.startsWith("GIF")) {
-			System.out.println("This is not a valid GIF file!");
-			return;
+		// Initialize dictionary.
+		for (int i = 0; i < colorTable.length; i++) {
+			int[] temp = { i };
+			this.dictionary[i] = temp;
 		}
-		System.out.println("This is a valid GIF file, version: " + gifHeaderString);
-		if (!(gifHeaderString.charAt(4) == '9')) {
-			System.out.println("This GIF version is not supported in this program!");
-			return;
-		}
-		int width = readLittleEndianShort();
-		System.out.println("Width: " + width);
-		int height = readLittleEndianShort();
-		System.out.println("Height: " + height);
-		byte logicalScreenDescriptor = dataInputStream.readByte();
-		int globalColorTableFlag = logicalScreenDescriptor >> 7 & 0x1;
-		int colorResolution = logicalScreenDescriptor >> 4 & 0x7;
-		int sortFlag = logicalScreenDescriptor >> 3 & 0x1;
-		int sizeOfGlobalColorTable = logicalScreenDescriptor & 0x7;
-		System.out.println("GlobalColorTableFlag: " + globalColorTableFlag);
-		System.out.println("ColorResolution: " + colorResolution);
-		System.out.println("SortFlag: " + sortFlag);
-		System.out.println("SizeOfGlobalColorTable: " + sizeOfGlobalColorTable);
-		int backgroundColorIndex = dataInputStream.readUnsignedByte();
-		System.out.println("BackgroundColorIndex: " + backgroundColorIndex);
-		int pixelAspectRatio = dataInputStream.readUnsignedByte();
-		System.out.println("PixelAspectRatio: " + pixelAspectRatio);
-		if (globalColorTableFlag == 1) {
-			sizeOfGlobalColorTable = 1 << (sizeOfGlobalColorTable + 1);
-			globalColorTable = new int[sizeOfGlobalColorTable][3];
-			loadColorTable(globalColorTable, sizeOfGlobalColorTable);
-		}
-		try {
-			while (true) {
-				int firstByte = dataInputStream.readUnsignedByte();
-				if (firstByte == 0x3B) {
-					System.out.println("Reached trailer.");
-					break;
-				} else if (firstByte == 0x21) {
-					System.out.println("Extension data read.");
-					int secondByte = dataInputStream.readUnsignedByte();
-					if (secondByte == 0xFF) {
-						System.out.println("This is an application extension.");
-						dataInputStream.skip(12);
-						int blockSize = dataInputStream.readUnsignedByte();
-						System.out.println("BlockSize: " + blockSize);
-						dataInputStream.skip(blockSize);
-						dataInputStream.skip(1);
-					} else if (secondByte == 0xF9) {
-						System.out.println("This is a graphic control extension.");
-						int blockSize = dataInputStream.readUnsignedByte();
-						System.out.println("BlockSize: " + blockSize);
-						dataInputStream.skip(blockSize);
-						dataInputStream.skip(1);
-					}
-				} else if (firstByte == 0x2C) {
-					System.out.println("This is an image descriptor.");
-					int imageLeftPosition = readLittleEndianShort();
-					System.out.println("imageLeftPosition: " + imageLeftPosition);
-					int imageTopPosition = readLittleEndianShort();
-					System.out.println("imageTopPosition: " + imageTopPosition);
-					int imageWidth = readLittleEndianShort();
-					System.out.println("imageWidth: " + imageWidth);
-					int imageHeight = readLittleEndianShort();
-					System.out.println("imageHeight: " + imageHeight);
-					byte misrpixel = dataInputStream.readByte();
-					int m = misrpixel >> 7 & 0x1;
-					System.out.println("m:" + m);
-					int i = misrpixel >> 6 & 0x1;
-					System.out.println("i:" + i);
-					int s = misrpixel >> 5 & 0x1;
-					System.out.println("s:" + s);
-					int r = misrpixel >> 3 & 0x3;
-					System.out.println("r:" + r);
-					int pixel = misrpixel & 0x7;
-					System.out.println("pixel:" + pixel);
-					if (m == 1) {
-						int sizeOflocalColorTable = 1 << (pixel + 1);
-						int[][] localColorTable = new int[sizeOflocalColorTable][3];
-						loadColorTable(localColorTable, sizeOflocalColorTable);
-						FrameImage image = new FrameImage(localColorTable, imageWidth, imageHeight);
-						imageList.add(image);
-					} else {
-						FrameImage image = new FrameImage(globalColorTable, imageWidth, imageHeight);
-						imageList.add(image);
-					}
-					int lzwMinimumCodeSize = dataInputStream.readUnsignedByte();
+		int newCode = clearCode;
+		while (true) {
+			int oldCode = newCode;
+			newCode = getNextCode();
+			if (newCode == stopCode) {
+				break;
+			} else if (newCode == clearCode) {
+				resetDictionary();
+			} else if (oldCode == clearCode) {
+				decode(oldCode, newCode, false, false);
+			} else {
+				if (newCode < dictionarySize) {
+					decode(oldCode, newCode, false, true);
+				} else {
+					decode(oldCode, oldCode, true, true);
+				}
+				if (dictionarySize >= (1 << codeSize) && codeSize < MAX_DICTIONARY_BIT_SIZE) {
+					codeSize++;
 				}
 			}
-		} catch (EOFException e) {
-			// TODO Auto-generated catch block
-			System.out.println("End of file.");
 		}
+		saveImageToBmpFile(pixelColor);
 	}
 
-	public int readLittleEndianShort() throws IOException {
-		int small = dataInputStream.read();
-		int big = dataInputStream.read();
-		return (small + big * 256);
+	// This function is to get next code from the input stream.
+	public int getNextCode() throws IOException {
+		int numberOfBitsGot = 0;
+		int code = 0;
+		while (numberOfBitsGot < codeSize) {
+			int currentByteCopy = currentByte;
+			int numberOfBitsToGet = 8 - bitPointer;
+			if (numberOfBitsToGet > (codeSize - numberOfBitsGot)) {
+				numberOfBitsToGet = codeSize - numberOfBitsGot;
+				int bitMask = 0xff >>> (8 - bitPointer - numberOfBitsToGet);
+				currentByteCopy &= bitMask;
+			} else {
+				currentByteCopy >>>= bitPointer;
+			}
+			code |= currentByteCopy << numberOfBitsGot;
+			numberOfBitsGot += numberOfBitsToGet;
+			bitPointer += numberOfBitsToGet;
+			if (bitPointer >= 8) {
+				// Reset bit bitPointer.
+				bitPointer = 0;
+				if (subblockByteCount >= subblockSize) {
+					subblockSize = dataInputStream.readUnsignedByte();
+					// Reset subblockByteCount.
+					subblockByteCount = 0;
+				}
+				currentByte = dataInputStream.readUnsignedByte();
+				subblockByteCount++;
+			}
+		}
+		return code;
 	}
 
-	public void loadColorTable(int[][] colorTable, int sizeOfColorTable) throws IOException {
-		for (int i = 0; i < sizeOfColorTable; i++) {
-			colorTable[i][0] = dataInputStream.readUnsignedByte();
-			colorTable[i][1] = dataInputStream.readUnsignedByte();
-			colorTable[i][2] = dataInputStream.readUnsignedByte();
+	// This function is to reset dictionary.
+	public void resetDictionary() {
+		dictionarySize = colorTable.length + 2;
+		codeSize = lzwMinimumCodeSize;
+	}
+
+	// This function is to save frame image to BMP file.
+	private void saveImageToBmpFile(int[] colorData) throws IOException {
+		int width = image.getWidth();
+		int height = image.getHeight();
+		File file = new File("Frame" + frameImageCount + ".bmp");
+		frameImageCount++;
+		DataOutputStream dataOutputStream = new DataOutputStream(new FileOutputStream(file));
+		BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		WritableRaster raster = bufferedImage.getRaster();
+		raster.setDataElements(0, 0, width, height, colorData);
+		ImageIO.write(bufferedImage, "bmp", dataOutputStream);
+	}
+
+	// This function is to decode the image on receiving a new code.
+	public void decode(int oldCode, int codeToOutput, boolean isToOutputCHAR, boolean isToCreateNewEntry) {
+		for (int i = 0; i < dictionary[codeToOutput].length; i++) {
+			pixelColor[pixelIndex++] = colorTable[dictionary[codeToOutput][i]];
+		}
+		int CHAR = dictionary[codeToOutput][0];
+		if (isToOutputCHAR) {
+			pixelColor[pixelIndex++] = colorTable[CHAR];
+		}
+		if (isToCreateNewEntry) {
+			int[] newEntry = new int[dictionary[oldCode].length + 1];
+			System.arraycopy(dictionary[oldCode], 0, newEntry, 0, dictionary[oldCode].length);
+			newEntry[newEntry.length - 1] = CHAR;
+			dictionary[dictionarySize] = newEntry;
+			dictionarySize++;
 		}
 	}
 }
