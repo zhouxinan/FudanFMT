@@ -93,15 +93,18 @@ public class LZWDecoder {
 	public int getNextCode() throws IOException {
 		int numberOfBitsGot = 0;
 		int code = 0;
+		// Loop until "codeSize" number of bits are got.
 		while (numberOfBitsGot < codeSize) {
 			int currentByteCopy = currentByte;
+			// Calculate how many bits to get in the current byte.
 			int numberOfBitsToGet = 8 - bitPointer;
 			if (numberOfBitsToGet > (codeSize - numberOfBitsGot)) {
 				numberOfBitsToGet = codeSize - numberOfBitsGot;
-				int bitMask = 0xff >>> (8 - bitPointer - numberOfBitsToGet);
+				// Create bit mask.
+				int bitMask = 0xff >> (8 - bitPointer - numberOfBitsToGet);
 				currentByteCopy &= bitMask;
 			} else {
-				currentByteCopy >>>= bitPointer;
+				currentByteCopy >>= bitPointer;
 			}
 			code |= currentByteCopy << numberOfBitsGot;
 			numberOfBitsGot += numberOfBitsToGet;
