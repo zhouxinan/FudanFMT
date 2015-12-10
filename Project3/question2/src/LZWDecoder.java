@@ -65,6 +65,8 @@ public class LZWDecoder {
 			int[] temp = { i };
 			this.dictionary[i] = temp;
 		}
+		// LZW algorithm.
+		// Set newCode to clearCode as default value.
 		int newCode = clearCode;
 		while (true) {
 			int oldCode = newCode;
@@ -81,7 +83,8 @@ public class LZWDecoder {
 				} else {
 					decode(oldCode, oldCode, true, true);
 				}
-				if (dictionarySize >= (1 << codeSize) && codeSize < MAX_DICTIONARY_BIT_SIZE) {
+				// Increase code size if necessary.
+				if (codeSize < MAX_DICTIONARY_BIT_SIZE && dictionarySize >= (1 << codeSize)) {
 					codeSize++;
 				}
 			}
@@ -106,12 +109,14 @@ public class LZWDecoder {
 			} else {
 				currentByteCopy >>= bitPointer;
 			}
+			// Add currentByteCopy to code.
 			code |= currentByteCopy << numberOfBitsGot;
 			numberOfBitsGot += numberOfBitsToGet;
 			bitPointer += numberOfBitsToGet;
 			if (bitPointer >= 8) {
 				// Reset bit bitPointer.
 				bitPointer = 0;
+				// When the current sub-block is finished, read the next sub-block
 				if (subblockByteCount >= subblockSize) {
 					subblockSize = dataInputStream.readUnsignedByte();
 					// Reset subblockByteCount.
@@ -134,6 +139,7 @@ public class LZWDecoder {
 	private void saveImageToBmpFile(int[] colorData) throws IOException {
 		int width = image.getWidth();
 		int height = image.getHeight();
+		// Let the output filename be "Frame*.bmp"
 		File file = new File("Frame" + frameImageCount + ".bmp");
 		frameImageCount++;
 		DataOutputStream dataOutputStream = new DataOutputStream(new FileOutputStream(file));
